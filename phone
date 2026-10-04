@@ -11,6 +11,8 @@ status() { printf '%s\n' "$1" > "$STATUS"; }
 mkdir -p "$CACHE"
 exec 9>"$CACHE/launcher.lock"
 flock -n 9 || exit 0
+START_MS=$(date +%s%3N)
+MIN_SPLASH_MS="${HOMESCREEN_SPLASH_MS:-3000}"
 status searching
 if command -v python3 >/dev/null && [[ -f "${HOMESCREEN_SPLASH:-$HOME/.local/share/homescreen-plus/splash.py}" ]]; then
     python3 "${HOMESCREEN_SPLASH:-$HOME/.local/share/homescreen-plus/splash.py}" "$STATUS" >/dev/null 2>&1 &
@@ -56,6 +58,10 @@ if [[ -z "$FOUND" ]]; then
     exit 1
 fi
 printf '%s\n' "$FOUND" > "$CACHE/phone-ip"
+elapsed=$(( $(date +%s%3N) - START_MS ))
+if (( elapsed < MIN_SPLASH_MS )); then
+    sleep "$(awk -v ms="$((MIN_SPLASH_MS - elapsed))" 'BEGIN { printf "%.3f", ms/1000 }')"
+fi
 status launching
 sleep 0.7
 cleanup
