@@ -3,20 +3,32 @@ set -u
 PORT="${HOMESCREEN_PORT:-5555}"
 MODEL="${HOMESCREEN_MODEL:-24129PN74G}"
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/homescreen-plus"
+STATUS="$CACHE/status-$"
+SPLASH_PID=""
+cleanup() { rm -f "$STATUS"; }
+trap cleanup EXIT
+status() { printf '%s\n' "$1" > "$STATUS"; }
 mkdir -p "$CACHE"
 exec 9>"$CACHE/launcher.lock"
 flock -n 9 || exit 0
+status searching
+if command -v python3 >/dev/null && [[ -f "${HOMESCREEN_SPLASH:-$HOME/.local/share/homescreen-plus/splash.py}" ]]; then
+    python3 "${HOMESCREEN_SPLASH:-$HOME/.local/share/homescreen-plus/splash.py}" "$STATUS" >/dev/null 2>&1 &
+    SPLASH_PID=$!
+fi
 check_phone() {
     local ip="$1" target model
     [[ -n "$ip" ]] || return 1
     target="$ip:$PORT"
+    status "connecting:$ip"
     adb connect "$target" >/dev/null 2>&1 || true
-    [[ "$(adb -s "$target" get-state 2>/dev/null)" == device ]] || return 1
+    [[ "$(adb -s "$target" get-state 2>/dev/null)" == device ]] || { status searching; return 1; }
     model=$(adb -s "$target" shell getprop ro.product.model 2>/dev/null | tr -d '\r')
     if [[ "$model" == *"$MODEL"* ]]; then
         FOUND="$ip"
         return 0
     fi
+    status searching
     return 1
 }
 FOUND=""
@@ -38,10 +50,16 @@ if [[ -z "$FOUND" ]]; then
     done < <(ip -4 route show scope link | awk '$1 ~ /^[0-9]+\./ && $1 ~ /\// {print $1}' | sort -u)
 fi
 if [[ -z "$FOUND" ]]; then
+    status notfound
+    sleep 2.5
     echo "Android model $MODEL not found on directly connected IPv4 networks." >&2
     exit 1
 fi
 printf '%s\n' "$FOUND" > "$CACHE/phone-ip"
+status launching
+sleep 0.7
+cleanup
+trap - EXIT
 export SDL_APP_ID=homescreen-plus
 export SDL_VIDEO_WAYLAND_WMCLASS=homescreen-plus
 export SDL_VIDEO_X11_WMCLASS=homescreen-plus
