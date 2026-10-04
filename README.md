@@ -35,6 +35,14 @@ scrcpy -s PHONE_LAN_IP:5555
 
 The splash remains visible for at least **3 seconds** after launch on a successful connection. Adjust the minimum with `HOMESCREEN_SPLASH_MS=5000` (milliseconds) in your launcher environment. This adds a presentation delay, not a network timeout.
 
+## Lock screen and protected content
+
+Android's normal lock screen can be shown and interacted with through scrcpy on supported devices, but you must unlock using the phone's usual authentication. HomeScreen + enables scrcpy's `--keep-active` by default to reduce unwanted sleep during interaction. Disable it with `HOMESCREEN_KEEP_ACTIVE=0`.
+
+scrcpy powers on the display by default when starting a session. If you prefer not to wake the physical screen, set `HOMESCREEN_NO_POWER_ON=1` to add `--no-power-on`. This does **not** unlock the device.
+
+**FLAG_SECURE and DRM:** Apps that use Android secure windows and DRM-protected rendering may remain black in scrcpy, including on Magisk-rooted Android 16. scrcpy offers no universal built-in setting to remove these protections, and this project does not change Android security policies, disable secure surfaces, capture credentials, or bypass protected video output. Use supported in-app casting or playback alternatives where available.
+
 ## How discovery works
 
 1. Attempts the last successful IP.
