@@ -1,73 +1,107 @@
 #!/usr/bin/env python3
-"""Connection status window for HomeScreen +."""
+"""HomeScreen + progress window. No external assets."""
 import os
+import subprocess
 import sys
 import tkinter as tk
 
-path = sys.argv[1]
+status_path = sys.argv[1]
+
+def dark_mode():
+    override = os.environ.get("HOMESCREEN_THEME", "auto").lower()
+    if override in ("dark", "light"):
+        return override == "dark"
+    # GNOME/GTK on Fedora, falling back to the freedesktop portal's setting.
+    try:
+        p = subprocess.run(
+            ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
+            capture_output=True, text=True, timeout=1)
+        if "prefer-dark" in p.stdout:
+            return True
+        if "prefer-light" in p.stdout:
+            return False
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    try:
+        p = subprocess.run(
+            ["dbus-send", "--session", "--print-reply", "--dest=org.freedesktop.portal.Desktop",
+             "/org/freedesktop/portal/desktop", "org.freedesktop.portal.Settings.Read",
+             "string:org.freedesktop.appearance", "string:color-scheme"],
+            capture_output=True, text=True, timeout=1)
+        if "uint32 1" in p.stdout:
+            return True
+        if "uint32 2" in p.stdout:
+            return False
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return False
+
+dark = dark_mode()
+BG, FG, MUTED, ACCENT = (
+    ("#202124", "#f3f4f6", "#aab0bb", "#89b4fa") if dark
+    else ("#f7f7f8", "#202124", "#68717d", "#2878ca")
+)
 root = tk.Tk(className="homescreen-plus")
 root.title("HomeScreen +")
 root.tk.call("tk", "appname", "homescreen-plus")
-root.configure(bg="#17191d")
-root.geometry("400x310")
-root.minsize(360, 300)
-
+root.configure(bg=BG)
+root.geometry("410x300")
+root.minsize(350, 280)
 icon = tk.PhotoImage(width=32, height=32)
-icon.put("#17191d", to=(0, 0, 32, 32))
-icon.put("#e0e3e8", to=(9, 2, 23, 30))
-icon.put("#17191d", to=(11, 5, 21, 26))
-icon.put("#7dbece", to=(13, 10, 19, 21))
+icon.put(BG, to=(0, 0, 32, 32))
+icon.put(FG, to=(9, 2, 23, 30))
+icon.put(BG, to=(11, 5, 21, 26))
+icon.put(ACCENT, to=(13, 10, 19, 21))
 root.iconphoto(True, icon)
-
-canvas = tk.Canvas(root, height=160, bg="#17191d", highlightthickness=0)
+canvas = tk.Canvas(root, height=155, bg=BG, highlightthickness=0)
 canvas.pack(fill="both", expand=True, padx=20, pady=(18, 0))
-label = tk.Label(root, text="Searching for phone", bg="#17191d",
-                 fg="#e0e3e8", font=("Sans", 12))
-label.pack(pady=(4, 26))
-
+label = tk.Label(root, text="Searching for phone", bg=BG, fg=FG, font=("Sans", 12))
+label.pack(pady=(7, 26))
 previous = None
-phase = 0
+angle = 0
 closing = False
+mode = "searching"
 
-def refresh():
-    global previous, phase, closing
-    phase += 1
+def tick():
+    global previous, angle, closing, mode
+    angle = (angle + 14) % 360
     canvas.delete("all")
-    w, h = max(240, canvas.winfo_width()), max(150, canvas.winfo_height())
+    w, h = max(220, canvas.winfo_width()), max(140, canvas.winfo_height())
     x, y = w / 2, h / 2
-    canvas.create_rectangle(x-39, y-64, x+39, y+64,
-                            outline="#c8d0dc", width=2)
-    canvas.create_line(x-9, y-56, x+9, y-56, fill="#c8d0dc", width=2)
-    canvas.create_oval(x-2, y+54, x+2, y+58, fill="#c8d0dc", outline="")
-    color = "#7dbece" if phase % 8 < 5 else "#36434b"
-    for radius in (32, 23, 14):
-        canvas.create_arc(x-radius, y-radius+9, x+radius, y+radius+9,
-                          start=45, extent=90, style="arc",
-                          outline=color, width=3)
-    canvas.create_oval(x-3, y+10, x+3, y+16, fill=color, outline="")
-
+    canvas.create_rectangle(x-40, y-65, x+40, y+65, outline=MUTED, width=2)
+    canvas.create_line(x-9, y-57, x+9, y-57, fill=MUTED, width=2)
+    canvas.create_oval(x-2, y+55, x+2, y+59, fill=MUTED, outline="")
+    if mode not in ("launching", "notfound"):
+        canvas.create_arc(x-23, y-23, x+23, y+23, start=angle, extent=260,
+                          style=tk.ARC, outline=ACCENT, width=4)
+    else:
+        canvas.create_oval(x-4, y-4, x+4, y+4, fill=ACCENT, outline="")
     try:
-        with open(path, encoding="utf-8") as stream:
+        with open(status_path, encoding="utf-8") as stream:
             current = stream.read().strip()
     except OSError:
         current = ""
     if current and current != previous:
         previous = current
         if current.startswith("connecting:"):
+            mode = "connecting"
             label.config(text="Connecting")
         elif current == "searching":
+            mode = "searching"
             label.config(text="Searching for phone")
         elif current == "launching":
+            mode = "launching"
             label.config(text="Connected")
             if not closing:
-                root.after(650, root.destroy)
                 closing = True
+                root.after(650, root.destroy)
         elif current == "notfound":
+            mode = "notfound"
             label.config(text="Phone not found")
             if not closing:
-                root.after(2200, root.destroy)
                 closing = True
-    root.after(100, refresh)
+                root.after(2200, root.destroy)
+    root.after(65, tick)
 
-refresh()
+tick()
 root.mainloop()
