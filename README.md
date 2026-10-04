@@ -35,6 +35,12 @@ scrcpy -s PHONE_LAN_IP:5555
 
 The splash remains visible for at least **3 seconds** after launch on a successful connection. Adjust the minimum with `HOMESCREEN_SPLASH_MS=5000` (milliseconds) in your launcher environment. This adds a presentation delay, not a network timeout.
 
+## Unlock reminder and splash identity
+
+The Tk splash and unlock reminder display the **HomeScreen +** title and request a custom phone icon rather than Tk's default icon. On Wayland, the compositor ultimately decides whether to display application icons and how to position windows.
+
+While scrcpy is open, `lock_notice.py` periodically checks the Android lock state using `adb shell dumpsys trust`. When Android unambiguously reports `deviceLocked=true`, a small **Unlock your phone** reminder is shown, which can be dismissed. It closes automatically after unlocking and is stopped when scrcpy exits. Android ROMs expose lock state differently, so on some builds this reminder may not appear. It is a separate, best-effort notification window, **not a guaranteed in-window scrcpy overlay**, and does not inspect the video stream, capture a PIN, or defeat secure screens. Disable it with `HOMESCREEN_UNLOCK_NOTICE=0`.
+
 ## Lock screen and protected content
 
 Android's normal lock screen can be shown and interacted with through scrcpy on supported devices, but you must unlock using the phone's usual authentication. HomeScreen + enables scrcpy's `--keep-active` by default to reduce unwanted sleep during interaction. Disable it with `HOMESCREEN_KEEP_ACTIVE=0`.
