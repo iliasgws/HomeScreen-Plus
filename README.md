@@ -33,6 +33,8 @@ adb connect PHONE_LAN_IP:5555
 scrcpy -s PHONE_LAN_IP:5555
 ```
 
+The splash uses a rotating spinner and follows the Fedora appearance setting (GNOME color scheme or XDG desktop portal where available). Override detection with `HOMESCREEN_THEME=light` or `HOMESCREEN_THEME=dark` in the launcher environment. If detection is unavailable, it defaults to light. No external GIF or image assets are required.
+
 The splash remains visible for at least **3 seconds** after launch on a successful connection. Adjust the minimum with `HOMESCREEN_SPLASH_MS=5000` (milliseconds) in your launcher environment. This adds a presentation delay, not a network timeout.
 
 ## Unlock reminder and splash identity
