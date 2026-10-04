@@ -1,6 +1,6 @@
 # HomeScreen +
 
-A one-click, terminal-free **scrcpy** launcher for Fedora Linux that discovers an authorized Android phone over local Wi-Fi. Features a desktop icon, `HomeScreen +` window title, cached-IP fast path, local subnet discovery and an exclusive lock to avoid duplicate launch windows, plus an animated connection splash with pulsing Wi-Fi signal and clear connection/error states.
+A Fedora launcher for scrcpy over ADB TCP/IP. Tries the last known IP, then existing ADB connections, then scans reachable local IPv4 networks. Includes a simple connection status window and prevents duplicate launches.
 
 ## Requirements
 
