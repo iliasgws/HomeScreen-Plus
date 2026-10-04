@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -u
+PORT="${HOMESCREEN_PORT:-5555}"
+MODEL="${HOMESCREEN_MODEL:-24129PN74G}"
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/homescreen-plus"
+mkdir -p "$CACHE"
+exec 9>"$CACHE/launcher.lock"
+flock -n 9 || exit 0
+check_phone() {
+    local ip="$1" target model
+    [[ -n "$ip" ]] || return 1
+    target="$ip:$PORT"
+    adb connect "$target" >/dev/null 2>&1 || true
+    [[ "$(adb -s "$target" get-state 2>/dev/null)" == device ]] || return 1
+    model=$(adb -s "$target" shell getprop ro.product.model 2>/dev/null | tr -d '\r')
+    if [[ "$model" == *"$MODEL"* ]]; then
+        FOUND="$ip"
+        return 0
+    fi
+    return 1
+}
+FOUND=""
+if [[ -f "$CACHE/phone-ip" ]]; then
+    check_phone "$(cat "$CACHE/phone-ip")" || true
+fi
+if [[ -z "$FOUND" ]]; then
+    while read -r target state; do
+        if [[ "$target" == *":$PORT" && "$state" == device ]]; then
+            check_phone "${target%:$PORT}" && break
+        fi
+    done < <(adb devices | tail -n +2)
+fi
+if [[ -z "$FOUND" ]]; then
+    while read -r subnet; do
+        while read -r ip; do
+            if check_phone "$ip"; then break 2; fi
+        done < <(nmap -n -sT -p "$PORT" --open -oG - "$subnet" | awk -v p="$PORT" '$0 ~ p"/open" {print $2}')
+    done < <(ip -4 route show scope link | awk '$1 ~ /^[0-9]+\./ && $1 ~ /\// {print $1}' | sort -u)
+fi
+if [[ -z "$FOUND" ]]; then
+    echo "Android model $MODEL not found on directly connected IPv4 networks." >&2
+    exit 1
+fi
+printf '%s\n' "$FOUND" > "$CACHE/phone-ip"
+export SDL_APP_ID=homescreen-plus
+export SDL_VIDEO_WAYLAND_WMCLASS=homescreen-plus
+export SDL_VIDEO_X11_WMCLASS=homescreen-plus
+exec scrcpy -s "$FOUND:$PORT" --window-title 'HomeScreen +'
