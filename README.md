@@ -33,6 +33,8 @@ adb connect PHONE_LAN_IP:5555
 scrcpy -s PHONE_LAN_IP:5555
 ```
 
+The splash remains visible for at least **3 seconds** after launch on a successful connection. Adjust the minimum with `HOMESCREEN_SPLASH_MS=5000` (milliseconds) in your launcher environment. This adds a presentation delay, not a network timeout.
+
 ## How discovery works
 
 1. Attempts the last successful IP.
