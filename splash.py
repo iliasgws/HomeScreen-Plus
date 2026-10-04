@@ -1,89 +1,118 @@
 #!/usr/bin/env python3
-"""Animated, dependency-light HomeScreen + connection splash."""
+"""Responsive HomeScreen + startup splash, Tkinter only."""
 import math
 import os
 import sys
 import tkinter as tk
 
 status_path = sys.argv[1]
-root = tk.Tk()
+BG = "#0d1322"
+PANEL = "#151f32"
+EDGE = "#26334b"
+TEXT = "#f1f5ff"
+MUTED = "#93a3be"
+BLUE = "#68d6ff"
+GREEN = "#66e3b5"
+RED = "#ff7891"
+
+root = tk.Tk(className="homescreen-plus")
 root.title("HomeScreen +")
-root.tk.call("tk", "appname", "homescreen-plus")
 root.iconname("HomeScreen +")
-app_icon = tk.PhotoImage(width=32, height=32)
-app_icon.put("#0b1020", to=(0,0,32,32))
-app_icon.put("#edf4ff", to=(8,2,24,30))
-app_icon.put("#243450", to=(10,5,22,26))
-app_icon.put("#64d7ff", to=(12,8,20,23))
-root.iconphoto(True, app_icon)
-root.configure(bg="#0b1020")
-root.geometry("380x410")
-root.resizable(False, False)
-canvas = tk.Canvas(root, width=380, height=410, highlightthickness=0, bg="#0b1020")
-canvas.pack()
-C = {"accent": "#64d7ff", "muted": "#8894ad", "white": "#edf4ff",
-     "red": "#ff7286", "green": "#65e0b2"}
-canvas.create_text(190, 47, text="HomeScreen +", fill=C["white"], font=("Sans", 21, "bold"))
-canvas.create_text(190, 79, text="WIRELESS MIRROR", fill=C["muted"], font=("Sans", 10, "bold"))
-# Soft backdrop and handset
-canvas.create_oval(66, 99, 314, 347, fill="#111c33", outline="")
-canvas.create_rectangle(126, 122, 254, 313, fill="#243450", outline="#5e7394", width=3)
-canvas.create_rectangle(137, 139, 243, 292, fill="#101b30", outline="")
-canvas.create_line(172, 131, 207, 131, fill="#8395b2", width=4)
-canvas.create_oval(185, 300, 195, 310, fill="#8395b2", outline="")
-# Four independent animated Wi-Fi elements
-arcs = [
-    canvas.create_arc(144, 171, 236, 263, start=45, extent=90, style=tk.ARC, outline=C["accent"], width=5),
-    canvas.create_arc(158, 185, 222, 249, start=45, extent=90, style=tk.ARC, outline=C["accent"], width=5),
-    canvas.create_arc(171, 198, 209, 236, start=45, extent=90, style=tk.ARC, outline=C["accent"], width=5),
-]
-dot = canvas.create_oval(185, 221, 195, 231, fill=C["accent"], outline="")
-status_text = canvas.create_text(190, 357, text="Searching for phone", fill=C["white"], font=("Sans", 13, "bold"))
-detail = canvas.create_text(190, 382, text="Looking for an authorized Android device", fill=C["muted"], font=("Sans", 10))
-state = "searching"
+root.configure(bg=BG)
+root.geometry("340x385")
+root.minsize(280, 350)
+root.resizable(True, True)
+root.tk.call("tk", "appname", "homescreen-plus")
+icon = tk.PhotoImage(width=32, height=32)
+icon.put(BG, to=(0, 0, 32, 32))
+icon.put(TEXT, to=(8, 2, 24, 30))
+icon.put(EDGE, to=(10, 5, 22, 26))
+icon.put(BLUE, to=(12, 8, 20, 23))
+root.iconphoto(True, icon)
+
+# Text uses real layout widgets, so it is never clipped by the illustration.
+heading = tk.Frame(root, bg=BG)
+heading.pack(fill="x", pady=(21, 4))
+tk.Label(heading, text="HomeScreen +", bg=BG, fg=TEXT,
+         font=("Sans", 17, "bold")).pack()
+tk.Label(heading, text="WIRELESS MIRROR", bg=BG, fg=MUTED,
+         font=("Sans", 9)).pack(pady=(4, 0))
+
+visual = tk.Canvas(root, bg=BG, highlightthickness=0, height=220)
+visual.pack(fill="both", expand=True, padx=12)
+status = tk.Label(root, text="Searching for phone", bg=BG, fg=TEXT,
+                  font=("Sans", 13, "bold"))
+status.pack(fill="x", padx=16, pady=(4, 0))
+detail = tk.Label(root, text="Looking for your Android device", bg=BG,
+                  fg=MUTED, font=("Sans", 10), wraplength=275)
+detail.pack(fill="x", padx=16, pady=(5, 20))
+
+mode = "searching"
 last = None
 frame = 0
 end_scheduled = False
 
+def render():
+    visual.delete("all")
+    w = max(250, visual.winfo_width())
+    h = max(190, visual.winfo_height())
+    cx, cy = w / 2, h / 2
+    scale = min(w / 300, h / 215, 1.1)
+    def xy(x, y):
+        return (cx + x * scale, cy + y * scale)
+    def oval(x1, y1, x2, y2, **kw):
+        visual.create_oval(*xy(x1, y1), *xy(x2, y2), **kw)
+    def rect(x1, y1, x2, y2, **kw):
+        visual.create_rectangle(*xy(x1, y1), *xy(x2, y2), **kw)
+    oval(-98, -100, 98, 100, fill=PANEL, outline="")
+    oval(-78, -80, 78, 80, outline=EDGE, width=1)
+    rect(-46, -91, 46, 91, fill="#22324b", outline="#657d9b", width=2)
+    rect(-37, -77, 37, 70, fill=BG, outline="")
+    visual.create_line(*xy(-10, -84), *xy(10, -84), fill=MUTED, width=3)
+    oval(-4, 79, 4, 87, fill=MUTED, outline="")
+    accent = RED if mode == "notfound" else GREEN if mode == "launching" else BLUE
+    for index, radius in enumerate((41, 29, 17)):
+        lum = (math.sin(frame * 0.20 - index * 0.85) + 1) / 2
+        color = accent if (lum > 0.28 or mode in ("notfound", "launching")) else EDGE
+        visual.create_arc(*xy(-radius, -radius + 8), *xy(radius, radius + 8),
+                          start=45, extent=90, style=tk.ARC,
+                          outline=color, width=max(2, round(3 * scale)))
+    oval(-5, 8, 5, 18, fill=accent, outline="")
+
 def tick():
-    global last, state, frame, end_scheduled
+    global mode, frame, last, end_scheduled
     frame += 1
     try:
-        with open(status_path, encoding="utf-8") as f:
-            current = f.read().strip()
+        with open(status_path, encoding="utf-8") as stream:
+            current = stream.read().strip()
     except OSError:
         current = ""
     if current and current != last:
         last = current
         if current.startswith("connecting:"):
-            state = "connecting"
-            canvas.itemconfig(status_text, text="Connecting", fill=C["white"])
-            canvas.itemconfig(detail, text="Checking " + current.split(":", 1)[1][:35])
+            mode = "connecting"
+            status.config(text="Connecting", fg=TEXT)
+            detail.config(text="Contacting " + current.split(":", 1)[1][:40])
         elif current == "searching":
-            state = "searching"
-            canvas.itemconfig(status_text, text="Searching for phone", fill=C["white"])
-            canvas.itemconfig(detail, text="Looking for an authorized Android device")
+            mode = "searching"
+            status.config(text="Searching for phone", fg=TEXT)
+            detail.config(text="Looking for your Android device")
         elif current == "launching":
-            state = "launching"
-            canvas.itemconfig(status_text, text="Connected", fill=C["green"])
-            canvas.itemconfig(detail, text="Opening screen mirror")
+            mode = "launching"
+            status.config(text="Connected", fg=GREEN)
+            detail.config(text="Opening your screen mirror")
             if not end_scheduled:
                 root.after(650, root.destroy)
                 end_scheduled = True
         elif current == "notfound":
-            state = "notfound"
-            canvas.itemconfig(status_text, text="Phone not found", fill=C["red"])
-            canvas.itemconfig(detail, text="Check Wi-Fi and ADB debugging")
+            mode = "notfound"
+            status.config(text="Phone not found", fg=RED)
+            detail.config(text="Check Wi-Fi and ADB debugging")
             if not end_scheduled:
                 root.after(2400, root.destroy)
                 end_scheduled = True
-    accent = C["red"] if state == "notfound" else C["green"] if state == "launching" else C["accent"]
-    for index, item in enumerate(arcs):
-        strength = (math.sin(frame * 0.21 - index * 0.7) + 1) / 2
-        dim = "#304764"
-        canvas.itemconfig(item, outline=accent if strength > 0.35 else dim)
-    canvas.itemconfig(dot, fill=accent if frame % 12 < 9 else "#304764")
-    root.after(65, tick)
+    render()
+    root.after(70, tick)
 
 tick()
 root.mainloop()
