@@ -7,6 +7,7 @@ done
 python3 -c "import tkinter" >/dev/null 2>&1 || { echo "Missing Tkinter: sudo dnf install python3-tkinter" >&2; exit 1; }
 install -Dm755 "$BASE/phone" "$HOME/.local/bin/homescreen-plus"
 install -Dm644 "$BASE/splash.py" "$HOME/.local/share/homescreen-plus/splash.py"
+install -Dm644 "$BASE/lock_notice.py" "$HOME/.local/share/homescreen-plus/lock_notice.py"
 install -Dm644 "$BASE/icons/homescreen-plus.svg" "$HOME/.local/share/icons/hicolor/scalable/apps/homescreen-plus.svg"
 mkdir -p "$HOME/.local/share/applications"
 cat > "$HOME/.local/share/applications/homescreen-plus.desktop" <<DESKTOP
