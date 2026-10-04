@@ -78,4 +78,16 @@ fi
 if [[ "${HOMESCREEN_NO_POWER_ON:-0}" == 1 ]]; then
     SCRCPY_OPTS+=(--no-power-on)
 fi
-exec scrcpy -s "$FOUND:$PORT" "${SCRCPY_OPTS[@]}"
+NOTICE_PID=""
+if [[ "${HOMESCREEN_UNLOCK_NOTICE:-1}" == 1 && -f "$HOME/.local/share/homescreen-plus/lock_notice.py" ]]; then
+    python3 "$HOME/.local/share/homescreen-plus/lock_notice.py" "$FOUND:$PORT" >/dev/null 2>&1 &
+    NOTICE_PID=$!
+fi
+stop_notice() {
+    if [[ -n "$NOTICE_PID" ]]; then
+        kill "$NOTICE_PID" 2>/dev/null || true
+        wait "$NOTICE_PID" 2>/dev/null || true
+    fi
+}
+trap stop_notice EXIT
+scrcpy -s "$FOUND:$PORT" "${SCRCPY_OPTS[@]}"
