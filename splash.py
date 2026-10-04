@@ -19,8 +19,8 @@ root = tk.Tk(className="homescreen-plus")
 root.title("HomeScreen +")
 root.iconname("HomeScreen +")
 root.configure(bg=BG)
-root.geometry("340x385")
-root.minsize(280, 350)
+root.geometry("460x460")
+root.minsize(420, 430)
 root.resizable(True, True)
 root.tk.call("tk", "appname", "homescreen-plus")
 icon = tk.PhotoImage(width=32, height=32)
@@ -29,23 +29,25 @@ icon.put(TEXT, to=(8, 2, 24, 30))
 icon.put(EDGE, to=(10, 5, 22, 26))
 icon.put(BLUE, to=(12, 8, 20, 23))
 root.iconphoto(True, icon)
+# Request enough room for the title and bottom status on scaled desktops.
+root.update_idletasks()
 
 # Text uses real layout widgets, so it is never clipped by the illustration.
 heading = tk.Frame(root, bg=BG)
 heading.pack(fill="x", pady=(21, 4))
 tk.Label(heading, text="HomeScreen +", bg=BG, fg=TEXT,
-         font=("Sans", 17, "bold")).pack()
+         font=("Sans", 15, "bold")).pack()
 tk.Label(heading, text="WIRELESS MIRROR", bg=BG, fg=MUTED,
          font=("Sans", 9)).pack(pady=(4, 0))
 
-visual = tk.Canvas(root, bg=BG, highlightthickness=0, height=220)
+visual = tk.Canvas(root, bg=BG, highlightthickness=0, height=170)
 visual.pack(fill="both", expand=True, padx=12)
 status = tk.Label(root, text="Searching for phone", bg=BG, fg=TEXT,
-                  font=("Sans", 13, "bold"))
+                  font=("Sans", 12, "bold"))
 status.pack(fill="x", padx=16, pady=(4, 0))
 detail = tk.Label(root, text="Looking for your Android device", bg=BG,
                   fg=MUTED, font=("Sans", 10), wraplength=275)
-detail.pack(fill="x", padx=16, pady=(5, 20))
+detail.pack(fill="x", padx=16, pady=(5, 25))
 
 mode = "searching"
 last = None
@@ -55,7 +57,7 @@ end_scheduled = False
 def render():
     visual.delete("all")
     w = max(250, visual.winfo_width())
-    h = max(190, visual.winfo_height())
+    h = max(165, visual.winfo_height())
     cx, cy = w / 2, h / 2
     scale = min(w / 300, h / 215, 1.1)
     def xy(x, y):
