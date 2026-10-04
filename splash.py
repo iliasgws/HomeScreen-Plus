@@ -1,120 +1,73 @@
 #!/usr/bin/env python3
-"""Responsive HomeScreen + startup splash, Tkinter only."""
-import math
+"""Connection status window for HomeScreen +."""
 import os
 import sys
 import tkinter as tk
 
-status_path = sys.argv[1]
-BG = "#0d1322"
-PANEL = "#151f32"
-EDGE = "#26334b"
-TEXT = "#f1f5ff"
-MUTED = "#93a3be"
-BLUE = "#68d6ff"
-GREEN = "#66e3b5"
-RED = "#ff7891"
-
+path = sys.argv[1]
 root = tk.Tk(className="homescreen-plus")
 root.title("HomeScreen +")
-root.iconname("HomeScreen +")
-root.configure(bg=BG)
-root.geometry("460x460")
-root.minsize(420, 430)
-root.resizable(True, True)
 root.tk.call("tk", "appname", "homescreen-plus")
+root.configure(bg="#17191d")
+root.geometry("400x310")
+root.minsize(360, 300)
+
 icon = tk.PhotoImage(width=32, height=32)
-icon.put(BG, to=(0, 0, 32, 32))
-icon.put(TEXT, to=(8, 2, 24, 30))
-icon.put(EDGE, to=(10, 5, 22, 26))
-icon.put(BLUE, to=(12, 8, 20, 23))
+icon.put("#17191d", to=(0, 0, 32, 32))
+icon.put("#e0e3e8", to=(9, 2, 23, 30))
+icon.put("#17191d", to=(11, 5, 21, 26))
+icon.put("#7dbece", to=(13, 10, 19, 21))
 root.iconphoto(True, icon)
-# Request enough room for the title and bottom status on scaled desktops.
-root.update_idletasks()
 
-# Text uses real layout widgets, so it is never clipped by the illustration.
-heading = tk.Frame(root, bg=BG)
-heading.pack(fill="x", pady=(21, 4))
-tk.Label(heading, text="HomeScreen +", bg=BG, fg=TEXT,
-         font=("Sans", 15, "bold")).pack()
-tk.Label(heading, text="WIRELESS MIRROR", bg=BG, fg=MUTED,
-         font=("Sans", 9)).pack(pady=(4, 0))
+canvas = tk.Canvas(root, height=160, bg="#17191d", highlightthickness=0)
+canvas.pack(fill="both", expand=True, padx=20, pady=(18, 0))
+label = tk.Label(root, text="Searching for phone", bg="#17191d",
+                 fg="#e0e3e8", font=("Sans", 12))
+label.pack(pady=(4, 26))
 
-visual = tk.Canvas(root, bg=BG, highlightthickness=0, height=170)
-visual.pack(fill="both", expand=True, padx=12)
-status = tk.Label(root, text="Searching for phone", bg=BG, fg=TEXT,
-                  font=("Sans", 12, "bold"))
-status.pack(fill="x", padx=16, pady=(4, 0))
-detail = tk.Label(root, text="Looking for your Android device", bg=BG,
-                  fg=MUTED, font=("Sans", 10), wraplength=275)
-detail.pack(fill="x", padx=16, pady=(5, 25))
+previous = None
+phase = 0
+closing = False
 
-mode = "searching"
-last = None
-frame = 0
-end_scheduled = False
+def refresh():
+    global previous, phase, closing
+    phase += 1
+    canvas.delete("all")
+    w, h = max(240, canvas.winfo_width()), max(150, canvas.winfo_height())
+    x, y = w / 2, h / 2
+    canvas.create_rectangle(x-39, y-64, x+39, y+64,
+                            outline="#c8d0dc", width=2)
+    canvas.create_line(x-9, y-56, x+9, y-56, fill="#c8d0dc", width=2)
+    canvas.create_oval(x-2, y+54, x+2, y+58, fill="#c8d0dc", outline="")
+    color = "#7dbece" if phase % 8 < 5 else "#36434b"
+    for radius in (32, 23, 14):
+        canvas.create_arc(x-radius, y-radius+9, x+radius, y+radius+9,
+                          start=45, extent=90, style="arc",
+                          outline=color, width=3)
+    canvas.create_oval(x-3, y+10, x+3, y+16, fill=color, outline="")
 
-def render():
-    visual.delete("all")
-    w = max(250, visual.winfo_width())
-    h = max(165, visual.winfo_height())
-    cx, cy = w / 2, h / 2
-    scale = min(w / 300, h / 215, 1.1)
-    def xy(x, y):
-        return (cx + x * scale, cy + y * scale)
-    def oval(x1, y1, x2, y2, **kw):
-        visual.create_oval(*xy(x1, y1), *xy(x2, y2), **kw)
-    def rect(x1, y1, x2, y2, **kw):
-        visual.create_rectangle(*xy(x1, y1), *xy(x2, y2), **kw)
-    oval(-98, -100, 98, 100, fill=PANEL, outline="")
-    oval(-78, -80, 78, 80, outline=EDGE, width=1)
-    rect(-46, -91, 46, 91, fill="#22324b", outline="#657d9b", width=2)
-    rect(-37, -77, 37, 70, fill=BG, outline="")
-    visual.create_line(*xy(-10, -84), *xy(10, -84), fill=MUTED, width=3)
-    oval(-4, 79, 4, 87, fill=MUTED, outline="")
-    accent = RED if mode == "notfound" else GREEN if mode == "launching" else BLUE
-    for index, radius in enumerate((41, 29, 17)):
-        lum = (math.sin(frame * 0.20 - index * 0.85) + 1) / 2
-        color = accent if (lum > 0.28 or mode in ("notfound", "launching")) else EDGE
-        visual.create_arc(*xy(-radius, -radius + 8), *xy(radius, radius + 8),
-                          start=45, extent=90, style=tk.ARC,
-                          outline=color, width=max(2, round(3 * scale)))
-    oval(-5, 8, 5, 18, fill=accent, outline="")
-
-def tick():
-    global mode, frame, last, end_scheduled
-    frame += 1
     try:
-        with open(status_path, encoding="utf-8") as stream:
+        with open(path, encoding="utf-8") as stream:
             current = stream.read().strip()
     except OSError:
         current = ""
-    if current and current != last:
-        last = current
+    if current and current != previous:
+        previous = current
         if current.startswith("connecting:"):
-            mode = "connecting"
-            status.config(text="Connecting", fg=TEXT)
-            detail.config(text="Contacting " + current.split(":", 1)[1][:40])
+            label.config(text="Connecting")
         elif current == "searching":
-            mode = "searching"
-            status.config(text="Searching for phone", fg=TEXT)
-            detail.config(text="Looking for your Android device")
+            label.config(text="Searching for phone")
         elif current == "launching":
-            mode = "launching"
-            status.config(text="Connected", fg=GREEN)
-            detail.config(text="Opening your screen mirror")
-            if not end_scheduled:
+            label.config(text="Connected")
+            if not closing:
                 root.after(650, root.destroy)
-                end_scheduled = True
+                closing = True
         elif current == "notfound":
-            mode = "notfound"
-            status.config(text="Phone not found", fg=RED)
-            detail.config(text="Check Wi-Fi and ADB debugging")
-            if not end_scheduled:
-                root.after(2400, root.destroy)
-                end_scheduled = True
-    render()
-    root.after(70, tick)
+            label.config(text="Phone not found")
+            if not closing:
+                root.after(2200, root.destroy)
+                closing = True
+    root.after(100, refresh)
 
-tick()
+refresh()
 root.mainloop()
