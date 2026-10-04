@@ -1,10 +1,10 @@
 # HomeScreen +
 
-A one-click, terminal-free **scrcpy** launcher for Fedora Linux that discovers an authorized Android phone over local Wi-Fi. Features a desktop icon, `HomeScreen +` window title, cached-IP fast path, local subnet discovery and an exclusive lock to avoid duplicate launch windows.
+A one-click, terminal-free **scrcpy** launcher for Fedora Linux that discovers an authorized Android phone over local Wi-Fi. Features a desktop icon, `HomeScreen +` window title, cached-IP fast path, local subnet discovery and an exclusive lock to avoid duplicate launch windows, plus an animated connection splash with pulsing Wi-Fi signal and clear connection/error states.
 
 ## Requirements
 
-- Fedora Linux with `scrcpy`, `adb` (`android-tools`), `nmap`, `ip` (`iproute`), and `flock` (`util-linux`).
+- Fedora Linux with `scrcpy`, `adb` (`android-tools`), `nmap`, `ip` (`iproute`), and `flock` (`util-linux`), Python 3 with Tkinter (`python3-tkinter`).
 - Phone and Fedora PC on a mutually reachable **trusted** local IPv4 network.
 - USB debugging previously authorized for the Fedora PC; ADB TCP/IP enabled on the phone, normally port 5555.
 - On some Wayland compositors, the taskbar/window icon is determined by compositor app-ID matching; the custom launcher icon is provided but cannot be guaranteed in every window manager.
@@ -12,7 +12,7 @@ A one-click, terminal-free **scrcpy** launcher for Fedora Linux that discovers a
 ## Install
 
 ```bash
-sudo dnf install android-tools nmap scrcpy iproute util-linux
+sudo dnf install android-tools nmap scrcpy iproute util-linux python3-tkinter
 git clone https://github.com/iliasgws/HomeScreen-Plus.git
 cd HomeScreen-Plus
 ./install.sh
@@ -38,7 +38,7 @@ scrcpy -s PHONE_LAN_IP:5555
 1. Attempts the last successful IP.
 2. Checks previously connected ADB TCP/IP devices.
 3. Scans directly connected IPv4 subnets for port 5555 (via Nmap), then checks Android's model with `getprop`.
-4. Opens exactly one scrcpy instance with the specified title and no terminal.
+4. Displays an animated phone/Wi-Fi splash during discovery, shows connection status or a short error message, and opens exactly one scrcpy instance with the specified title and no terminal.
 
 The scanning method does not work across the internet, client-isolated public Wi-Fi, or unrelated networks. Only scan networks you own or have permission to scan.
 
